@@ -27,8 +27,12 @@ func turnOffMonitor() {
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/" {
-		turnOffMonitor()
+		// 获取客户端的 IP 地址
+		clientIP := r.RemoteAddr
+		// 打印请求关闭的 IP 地址
+		fmt.Printf("Received request to turn off the screen from IP: %s\n", clientIP)
 		fmt.Fprintln(w, "Screen will be turned off")
+		go turnOffMonitor()
 	} else {
 		http.NotFound(w, r)
 	}
