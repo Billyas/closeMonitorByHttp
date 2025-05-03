@@ -1,7 +1,7 @@
 # 🔌 closeMonitorByHttp
 [![Golang 1.23.1](https://img.shields.io/badge/Go-1.23.1-blue.svg?style=flat)](https://golang.google.cn/doc/devel/release#go1.23.1)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-orange.svg)](https://www.gnu.org/licenses/gpl-3.0)
-[![Release: v1.3](https://img.shields.io/badge/Release-v1.3-brightgreen.svg)](https://github.com/Billyas/closeMonitorByHttp/releases/tag/v1.3)
+[![Release](https://img.shields.io/badge/Release-v1.4-brightgreen.svg)](https://github.com/Billyas/closeMonitorByHttp/releases/tag/v1.4)
 
 Windows显示器远程关闭工具，通过HTTP接口实现显示器电源管理。
 
