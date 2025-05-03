@@ -1,0 +1,67 @@
+name: Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build for Windows
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [windows]
+        arch: [amd64]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: 0
+        run: |
+          OUTPUT="closeMonitorByHttp-windows-amd64.exe"
+          go build -ldflags="-s -w -H=windowsgui" -o $OUTPUT
+          mkdir -p dist
+          mv $OUTPUT dist/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: binaries
+          path: dist/
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    needs: [build]
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: binaries
+          path: dist
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          body: |
+            ### 版本 ${{ github.ref_name }} 更新内容
+            - 版本：${{ github.ref_name }}
+              更新内容：${{ github.event.release.body }} 
+          files: |
+            dist/closeMonitorByHttp-*
+        env:
+          GITHUB_TOKEN: ${{ secrets.BUILD_TOKEN }}
