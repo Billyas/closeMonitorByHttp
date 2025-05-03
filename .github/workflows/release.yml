@@ -46,6 +46,34 @@ jobs:
       contents: write
     needs: [build]
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate changelog
+        run: |
+          tags=($(git tag --sort=-v:refname))
+          current_tag="${{ github.ref_name }}"
+          previous_tag=""
+          
+          for i in "${!tags[@]}"; do
+            if [[ "${tags[i]}" == "$current_tag" ]]; then
+              if [[ $i -lt $((${#tags[@]} - 1)) ]]; then
+                previous_tag="${tags[i+1]}"
+              fi
+              break
+            fi
+          done
+          
+          if [ -z "$previous_tag" ]; then
+            echo "No previous tag found, using initial commit"
+            git log --pretty=format:"- %s" > changelog.md
+          else
+            echo "Generating changes between $previous_tag and $current_tag"
+            git log --pretty=format:"- %s" $previous_tag..$current_tag > changelog.md
+          fi
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -57,10 +85,7 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          body: |
-            ### 版本 ${{ github.ref_name }} 更新内容
-            - 版本：${{ github.ref_name }}
-              更新内容：${{ github.event.release.body }} 
+          body_path: changelog.md
           files: |
             dist/closeMonitorByHttp-*
         env:
