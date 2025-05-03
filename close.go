@@ -110,12 +110,12 @@ func setAutoStart(enabled bool) error {
 
 	// 添加静默启动参数
 	if !enabled {
-		key, err := registry.OpenKey(
+		key, errs := registry.OpenKey(
 			registry.CURRENT_USER,
 			`Software\Microsoft\Windows\CurrentVersion\Run`,
 			registry.ALL_ACCESS,
 		)
-		if err != nil {
+		if errs != nil {
 			return fmt.Errorf("打开注册表失败: %v", err)
 		}
 		defer key.Close()
@@ -168,7 +168,7 @@ func onReady() {
 		for {
 			<-mAutoStart.ClickedCh
 			currentState := mAutoStart.Checked()
-			if err := setAutoStart(!currentState); err == nil {
+			if err = setAutoStart(!currentState); err == nil {
 				if !currentState {
 					mAutoStart.Check()
 				} else {
