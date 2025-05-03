@@ -5,7 +5,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"syscall"
+	"unsafe"
 
 	"github.com/getlantern/systray"
 	"golang.org/x/sys/windows/registry"
@@ -15,10 +17,15 @@ import (
 var (
 	user32          = syscall.NewLazyDLL("user32.dll")
 	procSendMessage = user32.NewProc("SendMessageW")
-	HWND_BROADCAST  = uintptr(0xFFFF)
-	WM_SYSCOMMAND   = uintptr(0x0112)
-	SC_MONITORPOWER = uintptr(0xF170)
-	MONITOR_OFF     = uintptr(2)
+	procMessageBox  = user32.NewProc("MessageBoxW")
+
+	MB_OK              = uintptr(0x00000000)
+	MB_ICONINFORMATION = uintptr(0x00000040)
+	MB_YESNO           = uintptr(0x00000004)
+	HWND_BROADCAST     = uintptr(0xFFFF)
+	WM_SYSCOMMAND      = uintptr(0x0112)
+	SC_MONITORPOWER    = uintptr(0xF170)
+	MONITOR_OFF        = uintptr(2)
 )
 
 func turnOffMonitor() {
@@ -172,8 +179,18 @@ func onReady() {
 		}
 	}()
 
+	// 添加关于菜单项
+	mAbout := systray.AddMenuItem("关于", "显示项目信息")
 	// 添加退出菜单项
 	mQuit := systray.AddMenuItem("退出", "退出应用")
+
+	// 处理关于点击事件
+	go func() {
+		for {
+			<-mAbout.ClickedCh
+			showAboutDialog()
+		}
+	}()
 
 	// 启动HTTP服务
 	go startServer()
@@ -195,6 +212,28 @@ func onReady() {
 	// 修改鼠标提示内容
 	tooltip := fmt.Sprintf("通过 HTTP 控制显示器，服务地址: http://%s:8233", localIP)
 	systray.SetTooltip(tooltip)
+}
+
+// showAboutDialog 显示关于对话框
+func showAboutDialog() {
+	const title = "关于 closeMonitorByHttp"
+	content := "项目名称: closeMonitorByHttp\n" +
+		"GitHub: https://github.com/Billyas/closeMonitorByHttp\n" +
+		"功能描述: 基于HTTP协议的远程显示器关闭工具\n\n是否要访问项目主页？"
+
+	result, _, _ := procMessageBox.Call(
+		0,
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(content))),
+		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(title))),
+		uintptr(MB_YESNO|MB_ICONINFORMATION),
+	)
+
+	if result == 6 { // IDYES
+		cmd := exec.Command("cmd", "/c", "start", "https://github.com/Billyas/closeMonitorByHttp")
+		if err := cmd.Start(); err != nil {
+			fmt.Printf("无法打开浏览器: %v\n", err)
+		}
+	}
 }
 
 // 清理资源
