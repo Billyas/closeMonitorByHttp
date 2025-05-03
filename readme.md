@@ -18,13 +18,13 @@ git clone https://github.com/Billyas/closeMonitorByHttp.git
 cd closeMonitorByHttp
 
 # 编译项目
-go build -o closeMonitorByHttp.exe
+go build -ldflags -H=windowsgui
 
 ```
 
 ## 🚀 快速使用
 ```bash
-# 启动服务（默认端口8080）
+# 启动服务（默认端口8233）
 ./closeMonitorByHttp.exe
 
 # 发送关闭显示器请求

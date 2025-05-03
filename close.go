@@ -241,7 +241,16 @@ func onExit() {
 	// 在这里可以添加清理代码
 }
 
+// main 程序入口
 func main() {
+	// 隐藏控制台窗口
+	hideConsole()
 	// 启动系统托盘
 	systray.Run(onReady, onExit)
+}
+
+// hideConsole 隐藏控制台窗口（仅Windows生效）
+func hideConsole() {
+	console := syscall.NewLazyDLL("kernel32.dll").NewProc("FreeConsole")
+	console.Call()
 }
