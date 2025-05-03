@@ -174,7 +174,6 @@ func onReady() {
 				} else {
 					mAutoStart.Uncheck()
 				}
-				systray.SetTooltip(fmt.Sprintf("当前启动状态: %t", !currentState))
 			}
 		}
 	}()
@@ -210,7 +209,7 @@ func onReady() {
 	}
 
 	// 修改鼠标提示内容
-	tooltip := fmt.Sprintf("通过 HTTP 控制显示器，服务地址: http://%s:8233", localIP)
+	tooltip := fmt.Sprintf("通过 HTTP 控制显示器\n服务地址: http://%s:8233", localIP)
 	systray.SetTooltip(tooltip)
 }
 
