@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/getlantern/systray"
 	"net"
 	"net/http"
 	"os"
 	"syscall"
+
+	"github.com/getlantern/systray"
+	"golang.org/x/sys/windows/registry"
 )
 
 // 定义Windows API函数和常量
@@ -74,6 +76,65 @@ func getLocalIPv4() (string, error) {
 	return "", fmt.Errorf("未找到本地 IPv4 地址")
 }
 
+// setAutoStart 设置程序开机自启动
+// checkAutoStart 检测当前是否设置开机启动
+func checkAutoStart() (bool, error) {
+	key, err := registry.OpenKey(
+		registry.CURRENT_USER,
+		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		registry.QUERY_VALUE,
+	)
+	if err != nil {
+		return false, nil
+	}
+	defer key.Close()
+
+	_, _, err = key.GetStringValue("CloseMonitorByHttp")
+	return err == nil, nil
+}
+
+// setAutoStart 设置/取消开机自启动
+func setAutoStart(enabled bool) error {
+	// 获取当前可执行文件路径
+	exePath, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("获取可执行文件路径失败: %v", err)
+	}
+
+	// 添加静默启动参数
+	if !enabled {
+		key, err := registry.OpenKey(
+			registry.CURRENT_USER,
+			`Software\Microsoft\Windows\CurrentVersion\Run`,
+			registry.ALL_ACCESS,
+		)
+		if err != nil {
+			return fmt.Errorf("打开注册表失败: %v", err)
+		}
+		defer key.Close()
+		return key.DeleteValue("CloseMonitorByHttp")
+	}
+
+	command := fmt.Sprintf("\"%s\" -auto", exePath)
+
+	// 打开注册表项
+	key, _, err := registry.CreateKey(
+		registry.CURRENT_USER,
+		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		registry.ALL_ACCESS,
+	)
+	if err != nil {
+		return fmt.Errorf("创建注册表项失败: %v", err)
+	}
+	defer key.Close()
+
+	// 设置注册表值
+	if err := key.SetStringValue("CloseMonitorByHttp", command); err != nil {
+		return fmt.Errorf("写入注册表失败: %v", err)
+	}
+	return nil
+}
+
 func onReady() {
 	iconData, err := GetDefaultIconData()
 	if err != nil {
@@ -85,6 +146,31 @@ func onReady() {
 	}
 	systray.SetTitle("显示器控制")
 	systray.SetTooltip("通过HTTP控制显示器")
+
+	// 添加带复选框的启动项
+	mAutoStart := systray.AddMenuItemCheckbox("开机启动", "开机自动启动", false)
+	// 初始化启动项状态（默认不勾选）
+	if enabled, _ := checkAutoStart(); enabled {
+		mAutoStart.Check()
+	} else {
+		mAutoStart.Uncheck()
+	}
+
+	// 处理启动项点击事件
+	go func() {
+		for {
+			<-mAutoStart.ClickedCh
+			currentState := mAutoStart.Checked()
+			if err := setAutoStart(!currentState); err == nil {
+				if !currentState {
+					mAutoStart.Check()
+				} else {
+					mAutoStart.Uncheck()
+				}
+				systray.SetTooltip(fmt.Sprintf("当前启动状态: %t", !currentState))
+			}
+		}
+	}()
 
 	// 添加退出菜单项
 	mQuit := systray.AddMenuItem("退出", "退出应用")
